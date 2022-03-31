@@ -39,12 +39,63 @@
     return Constructor;
   }
 
+  var oldArrayProto = Array.prototype;
+  var newArrayProto = Object.create(oldArrayProto);
+  var methods = ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse', 'sort'];
+  methods.forEach(function (method) {
+    newArrayProto[method] = function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      // 重写了数组的方法
+      var result = oldArrayProto.call.apply(oldArrayProto, [this].concat(args)); //内部调用原来的方法
+      //我们需要对新增的数据再进行劫持
+
+      var inserted;
+      var ob = this.__ob__;
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+
+      if (inserted) {
+        //如果有新增的数据 再对他进行劫持
+        ob.observeArray(inserted);
+      }
+
+      console.log('新增的内容');
+      return result;
+    };
+  });
+
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
 
       // object.defineProperty只能劫持已经存在的属性,后增($set)的或者删除($delete)的不会影响
-      this.walk(data);
+      // 这样不仅给data增加了新的法法,还给数据加了一个标识 如果有这个就说明已经被观察过了
+      Object.defineProperty(data, '__ob__', {
+        value: this,
+        enumerable: false //防止被循环引用
+
+      });
+
+      if (Array.isArray(data)) {
+        //去重写数组的原型
+        Object.setPrototypeOf(data, newArrayProto); // 如果数组中放的是对象 也让他去检测到
+
+        this.observeArray(data);
+      } else {
+        this.walk(data);
+      }
     }
 
     _createClass(Observer, [{
@@ -54,6 +105,13 @@
         // "重新定义"属性 所以性能很差
         Object.keys(data).forEach(function (key) {
           return defineReactive(data, key, data[key]);
+        });
+      }
+    }, {
+      key: "observeArray",
+      value: function observeArray(data) {
+        data.forEach(function (item) {
+          return observe(item);
         });
       }
     }]);
@@ -81,7 +139,13 @@
   }
   function observe(data) {
     //只对对象进行劫持
-    if (_typeof(data) !== 'object' || data === null) return; //标记该对象是否被劫持过(要判断一个对象是否被劫持过,可以添加一个实例,用实例来判断是否被劫持过)
+    if (_typeof(data) !== 'object' || data === null) return;
+
+    if (data.__ob__ instanceof Observer) {
+      //说明这个对象被代理过了
+      return data.__ob__;
+    } //标记该对象是否被劫持过(要判断一个对象是否被劫持过,可以添加一个实例,用实例来判断是否被劫持过)
+
 
     return new Observer(data);
   }
