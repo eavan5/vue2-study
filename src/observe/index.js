@@ -34,11 +34,9 @@ export function defineReactive (data, key, value) {  //这个函数是一个闭�
   observe(value) //递归检测 直到是一个简单数据类型为止
   Object.defineProperty(data, key, {
     get () {
-      console.log('用户取值');
       return value
     },
     set (newValue) {
-      console.log('用户设置值');
       if (newValue === value) return
       observe(newValue) //赋值的时候再去做一个递归
       value = newValue
