@@ -35,5 +35,4 @@ function initData (vm) {
       proxy(vm, '_data', key)
     }
   }
-  proxy(vm, '_data')
 }

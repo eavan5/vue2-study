@@ -47,7 +47,7 @@ export function defineReactive (data, key, value) {  //这个函数是一个闭�
 }
 
 export function observe (data) {
-  //只对对象进行劫持
+  //只对对象和数组进行劫持
   if (typeof data !== 'object' || data === null) return
 
   if (data.__ob__ instanceof Observer) { //说明这个对象被代理过了

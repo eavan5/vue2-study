@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<div id="app">
+			<div>{{name}}</div>
+			<span>{{age}}</span>
+		</div>
+		<script src="./vue.js"></script>
+		<script>
+			const vm = new Vue({
+				//代理数据
+				data() {
+					return {
+						name: 'wumao',
+						age: 16,
+						info: {
+							sex: 'man',
+							hobby: 'none',
+						},
+						hobby: [1, 2, 3, { age: 1 }],
+					}
+				},
+				el: '#app',
+			})
+			// console.log(vm)
+			//  1. 模板引擎 性能差 需要正则匹配替换  1.0的时候没有引用虚拟dom的时候  性能很差
+			//  2. 采用虚拟dom  数据变化后比较虚拟dom的差异 最后更新需要更新的地方
+			//  3. 核心就是我们需要将模板变成我们的js语法 通过js语法生成虚拟dom
+
+			//  最终就是将template语法转换成render函数
+		</script>
+	</body>
+</html>
