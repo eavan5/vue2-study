@@ -24,7 +24,6 @@ function parseHTML (html) { // vue2中 html最开始肯定是一个<
       }
       advance(start[0].length)
 
-
       //如果不是开始标签的结束/>并且标签上还有属性 就一直匹配下去
       let attrs, end
       while (!(end = html.match(startTagClose)) && (attrs = html.match(attribute))) {
@@ -34,15 +33,14 @@ function parseHTML (html) { // vue2中 html最开始肯定是一个<
           value: attrs[3] || attrs[4] || attrs[5]
         })
       }
-      console.log(match);
+      // console.log(match);
       //去除>结束标签
       if (end) {
         advance(end[0].length)
       }
-      console.log(html);
+      // console.log(html);
       return match
     }
-
 
     return false //不是开始标签
   }
@@ -53,12 +51,29 @@ function parseHTML (html) { // vue2中 html最开始肯定是一个<
     // 如果>0 说明是文本的结束位置
     let textEnd = html.indexOf('<') // 如果indexOf中的索引是0,说明是一个标签
     if (textEnd === 0) {
-      let startTagMatch = parseStartTag() //开始标签的匹配结果
 
-      break
+      const startTagMatch = parseStartTag() //开始标签的匹配结果
+      if (startTagMatch) {
+        continue
+      }
+
+      const endTagMatch = html.match(endTag)  //处理结束标签 </xxx>
+      if (endTagMatch) {
+        advance(endTagMatch[0].length)
+        continue
+      }
+
+    }
+    if (textEnd > 0) { //去除<之后说明有文本了
+      let text = html.substring(0, textEnd)
+      if (text) {
+        advance(text.length)
+      }
+
     }
 
   }
+  console.log(html);
 }
 
 

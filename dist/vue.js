@@ -8,6 +8,8 @@
   var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
   var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 标签开头的正则 捕获的内容是标签名
 
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 匹配标签结尾的 </div>
+
   var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性的
 
   var startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
@@ -39,15 +41,15 @@
             name: attrs[1],
             value: attrs[3] || attrs[4] || attrs[5]
           });
-        }
+        } // console.log(match);
+        //去除>结束标签
 
-        console.log(match); //去除>结束标签
 
         if (end) {
           advance(end[0].length);
-        }
+        } // console.log(html);
 
-        console.log(html);
+
         return match;
       }
 
@@ -60,11 +62,31 @@
       var textEnd = html.indexOf('<'); // 如果indexOf中的索引是0,说明是一个标签
 
       if (textEnd === 0) {
-        parseStartTag(); //开始标签的匹配结果
+        var startTagMatch = parseStartTag(); //开始标签的匹配结果
 
-        break;
+        if (startTagMatch) {
+          continue;
+        }
+
+        var endTagMatch = html.match(endTag); //处理结束标签 </xxx>
+
+        if (endTagMatch) {
+          advance(endTagMatch[0].length);
+          continue;
+        }
+      }
+
+      if (textEnd > 0) {
+        //去除<之后说明有文本了
+        var text = html.substring(0, textEnd);
+
+        if (text) {
+          advance(text.length);
+        }
       }
     }
+
+    console.log(html);
   }
 
   function compileToTFunction(template) {
