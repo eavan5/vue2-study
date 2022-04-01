@@ -10,6 +10,59 @@ const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 //vue3采用的不是正则
 // 对模板进行编译处理
 function parseHTML (html) { // vue2中 html最开始肯定是一个<
+
+  const ELEMENT_TYPE = 1
+  const TEXT_TYPE = 3
+  const stack = []
+  let currentParent // 指向的是栈中的最后一个
+  let root
+
+  //最终要转换成一颗抽象语法树
+
+  function createASTElement (tag, attrs) {
+    return {
+      tag,
+      type: ELEMENT_TYPE,
+      attrs,
+      parent: null,
+      children: []
+    }
+  }
+
+  // 你用栈结构 去构造一棵树
+  function start (tag, attrs) {
+    let node = createASTElement(tag, attrs) //创造一个ast节点
+    if (!root) { // 看看是否为空数
+      root = node  // 将当前节点当成树的根节点
+    }
+
+    if (currentParent) {
+      node.parent = currentParent
+      currentParent.children.push(node) // 还需要父亲记住自己
+    }
+    stack.push(node)
+    currentParent = node // currentParent为栈中最后一个
+    console.log(tag, attrs, '开始');
+  }
+
+  function chars (text) { // 文本直接放到当前指向的节点
+    text = text.replace(/\s/g, '')
+    text && currentParent.children.push({
+      type: TEXT_TYPE,
+      text,
+      parent: currentParent
+    })
+    console.log(text, '文本');
+  }
+
+  function end (tag) {
+    stack.pop() //弹出最后一个
+    currentParent = stack.at(-1)
+    console.log(tag, '结束');
+
+  }
+
+
   function advance (n) {
     // console.log(html);
     html = html.substring(n)
@@ -51,15 +104,16 @@ function parseHTML (html) { // vue2中 html最开始肯定是一个<
     // 如果>0 说明是文本的结束位置
     let textEnd = html.indexOf('<') // 如果indexOf中的索引是0,说明是一个标签
     if (textEnd === 0) {
-
       const startTagMatch = parseStartTag() //开始标签的匹配结果
       if (startTagMatch) {
+        start(startTagMatch.tagName, startTagMatch.attrs)
         continue
       }
 
       const endTagMatch = html.match(endTag)  //处理结束标签 </xxx>
       if (endTagMatch) {
         advance(endTagMatch[0].length)
+        end(endTagMatch[1])
         continue
       }
 
@@ -67,6 +121,7 @@ function parseHTML (html) { // vue2中 html最开始肯定是一个<
     if (textEnd > 0) { //去除<之后说明有文本了
       let text = html.substring(0, textEnd)
       if (text) {
+        chars(text)
         advance(text.length)
       }
 
@@ -74,6 +129,7 @@ function parseHTML (html) { // vue2中 html最开始肯定是一个<
 
   }
   console.log(html);
+  console.log(root);
 }
 
 

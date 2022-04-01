@@ -17,6 +17,61 @@
 
   function parseHTML(html) {
     // vue2中 html最开始肯定是一个<
+    var ELEMENT_TYPE = 1;
+    var TEXT_TYPE = 3;
+    var stack = [];
+    var currentParent; // 指向的是栈中的最后一个
+
+    var root; //最终要转换成一颗抽象语法树
+
+    function createASTElement(tag, attrs) {
+      return {
+        tag: tag,
+        type: ELEMENT_TYPE,
+        attrs: attrs,
+        parent: null,
+        children: []
+      };
+    } // 你用栈结构 去构造一棵树
+
+
+    function start(tag, attrs) {
+      var node = createASTElement(tag, attrs); //创造一个ast节点
+
+      if (!root) {
+        // 看看是否为空数
+        root = node; // 将当前节点当成树的根节点
+      }
+
+      if (currentParent) {
+        node.parent = currentParent;
+        currentParent.children.push(node); // 还需要父亲记住自己
+      }
+
+      stack.push(node);
+      currentParent = node; // currentParent为栈中最后一个
+
+      console.log(tag, attrs, '开始');
+    }
+
+    function chars(text) {
+      // 文本直接放到当前指向的节点
+      text = text.replace(/\s/g, '');
+      text && currentParent.children.push({
+        type: TEXT_TYPE,
+        text: text,
+        parent: currentParent
+      });
+      console.log(text, '文本');
+    }
+
+    function end(tag) {
+      stack.pop(); //弹出最后一个
+
+      currentParent = stack.at(-1);
+      console.log(tag, '结束');
+    }
+
     function advance(n) {
       // console.log(html);
       html = html.substring(n);
@@ -33,9 +88,9 @@
         };
         advance(start[0].length); //如果不是开始标签的结束/>并且标签上还有属性 就一直匹配下去
 
-        var attrs, end;
+        var attrs, _end;
 
-        while (!(end = html.match(startTagClose)) && (attrs = html.match(attribute))) {
+        while (!(_end = html.match(startTagClose)) && (attrs = html.match(attribute))) {
           advance(attrs[0].length);
           match.attrs.push({
             name: attrs[1],
@@ -45,8 +100,8 @@
         //去除>结束标签
 
 
-        if (end) {
-          advance(end[0].length);
+        if (_end) {
+          advance(_end[0].length);
         } // console.log(html);
 
 
@@ -65,6 +120,7 @@
         var startTagMatch = parseStartTag(); //开始标签的匹配结果
 
         if (startTagMatch) {
+          start(startTagMatch.tagName, startTagMatch.attrs);
           continue;
         }
 
@@ -72,6 +128,7 @@
 
         if (endTagMatch) {
           advance(endTagMatch[0].length);
+          end(endTagMatch[1]);
           continue;
         }
       }
@@ -81,12 +138,14 @@
         var text = html.substring(0, textEnd);
 
         if (text) {
+          chars(text);
           advance(text.length);
         }
       }
     }
 
     console.log(html);
+    console.log(root);
   }
 
   function compileToTFunction(template) {
