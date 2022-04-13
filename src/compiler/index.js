@@ -33,13 +33,13 @@ function gen (node) {
     let lastIndex = defaultTagRE.lastIndex = 0
     let tokens = [];
     let match, index;
-    console.log(text);
+    // console.log(text);
     while (match = defaultTagRE.exec(text)) {
       index = match.index;
       if (index > lastIndex) {
         tokens.push(JSON.stringify(text.slice(lastIndex, index)));
       }
-      console.log(index, lastIndex);
+      // console.log(index, lastIndex);
       tokens.push(`_s(${match[1].trim()})`)
       lastIndex = index + match[0].length;
     }
@@ -63,6 +63,10 @@ export function compileToTFunction (template) {
   let ast = parseHTML(template)
   // console.log(ast);
   // 2.生成render函数 (render方法执行的返回的结果就是虚拟dom)
-  console.log(genCode(ast));
-  console.log(template);
+  let code = genCode(ast) //生成render函数的字符串
+  code = `with(this){return ${code}}`
+  let render = new Function(code)
+  // console.log(render.toString());
+  // console.log(template);
+  return render
 }

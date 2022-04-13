@@ -4,6 +4,19 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  function mountComponent(vm, el) {
+    //1.调用render函数产生虚拟dom
+    // vm._render() // vm.$options.render 生成虚拟节点
+    //2.根据虚拟dom生成真实dom
+    vm.update(vm._render()); //3.插入到真实dom
+  } // Vue核心流程  
+  // 1) 创建了响应式数据
+  // 2) 模板转换成ast语法树
+  // 3) 将ast语法树转换成render函数
+  // 4) 后续每次数据更新可以直接执行render函数(无需再次执行ast转换的过程)
+  // render函数会产生虚拟节点(使用响应式数据)
+  // 根据生成的虚拟节点创建真实的dom
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -288,17 +301,16 @@
 
       var lastIndex = defaultTagRE.lastIndex = 0;
       var tokens = [];
-      var match, index;
-      console.log(text);
+      var match, index; // console.log(text);
 
       while (match = defaultTagRE.exec(text)) {
         index = match.index;
 
         if (index > lastIndex) {
           tokens.push(JSON.stringify(text.slice(lastIndex, index)));
-        }
+        } // console.log(index, lastIndex);
 
-        console.log(index, lastIndex);
+
         tokens.push("_s(".concat(match[1].trim(), ")"));
         lastIndex = index + match[0].length;
       }
@@ -322,8 +334,13 @@
     var ast = parseHTML(template); // console.log(ast);
     // 2.生成render函数 (render方法执行的返回的结果就是虚拟dom)
 
-    console.log(genCode(ast));
-    console.log(template);
+    var code = genCode(ast); //生成render函数的字符串
+
+    code = "with(this){return ".concat(code, "}");
+    var render = new Function(code); // console.log(render.toString());
+    // console.log(template);
+
+    return render;
   }
 
   var oldArrayProto = Array.prototype;
@@ -479,6 +496,7 @@
       vm.$options = options; //初始化状态
 
       initState(vm);
+      initLifecycle(Vue);
 
       if (options.el) {
         vm.$mount(options.el); //实现数据的挂载
@@ -507,9 +525,11 @@
           // 对模板进行编译
           var render = compileToTFunction(template);
           ops.render = render;
-        } // script标签如果引用的是vue.global.js 这个编译过程是在浏览器端的
-        // runtime是不包括把模板编译的,这个编译打包的过程是放在loader去转译.vue文件的,用runtime的时候不能使用template标签
+        }
 
+        mountComponent(vm); //组件的挂载
+        // script标签如果引用的是vue.global.js 这个编译过程是在浏览器端的
+        // runtime是不包括把模板编译的,这个编译打包的过程是放在loader去转译.vue文件的,用runtime的时候不能使用template标签
       }
     };
   }

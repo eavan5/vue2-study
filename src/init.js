@@ -1,3 +1,4 @@
+import { mountComponent } from '../lifecycle'
 import { compileToTFunction } from './compiler'
 import { initState } from './state'
 
@@ -10,6 +11,8 @@ export function initMixin (Vue) {  // 给vue真假init方法
 
     //初始化状态
     initState(vm)
+
+    initLifecycle(Vue)
 
     if (options.el) {
       vm.$mount(options.el) //实现数据的挂载
@@ -34,6 +37,8 @@ export function initMixin (Vue) {  // 给vue真假init方法
         const render = compileToTFunction(template)
         ops.render = render
       }
+
+      mountComponent(vm, el) //组件的挂载
 
 
       // script标签如果引用的是vue.global.js 这个编译过程是在浏览器端的
