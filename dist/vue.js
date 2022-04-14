@@ -4,19 +4,6 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
-  function mountComponent(vm, el) {
-    //1.调用render函数产生虚拟dom
-    // vm._render() // vm.$options.render 生成虚拟节点
-    //2.根据虚拟dom生成真实dom
-    vm.update(vm._render()); //3.插入到真实dom
-  } // Vue核心流程  
-  // 1) 创建了响应式数据
-  // 2) 模板转换成ast语法树
-  // 3) 将ast语法树转换成render函数
-  // 4) 后续每次数据更新可以直接执行render函数(无需再次执行ast转换的过程)
-  // render函数会产生虚拟节点(使用响应式数据)
-  // 根据生成的虚拟节点创建真实的dom
-
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -110,6 +97,129 @@
   function _nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
+
+  // h() _c()
+  function createElementVNode(vm, tag) {
+    var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    data || (data = {});
+    var key = data.key;
+    if (key) delete data.key;
+
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
+    }
+
+    return vnode(vm, tag, key, data, children);
+  } //_v()
+
+  function createTextVNode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
+  } // ast一样?? ast做的是语法层面的转换  描述的是语法本身
+  // 我们的虚拟dom 是描述的dom元素,可以增加一些自定义的属性
+
+  function vnode(vm, tag, key, data, children, text) {
+    return {
+      vm: vm,
+      tag: tag,
+      key: key,
+      data: data,
+      children: children,
+      text: text
+    };
+  }
+
+  function createElm(vnode) {
+    var tag = vnode.tag,
+        data = vnode.data,
+        children = vnode.children,
+        text = vnode.text;
+
+    if (typeof tag === 'string') {
+      vnode.el = document.createElement(tag); // 这里将真实节点与虚拟节点对应起来,后续如果修改属性,可以通过虚拟节点修改真实节点
+
+      patchProps(vnode.el, data);
+      children.forEach(function (child) {
+        vnode.el.appendChild(createElm(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function patchProps(el, props) {
+    for (var key in props) {
+      if (key === 'style') {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(key, props[key]);
+      }
+    }
+  }
+
+  function patch(oldVNode, vnode) {
+    //写的出渲染流程
+    var isRealElement = oldVNode.nodeType;
+
+    if (isRealElement) {
+      var elm = oldVNode; // 获取真实元素
+
+      var parentElm = elm.parentNode; // 拿到父元素
+
+      var newElm = createElm(vnode);
+      parentElm.insertBefore(newElm, elm.nextSibling);
+      parentElm.removeChild(elm);
+    }
+  }
+
+  function initLifecycle(Vue) {
+    Vue.prototype._render = function () {
+      var vm = this; // 让with的this指向vm
+      // 当渲染的时候就会从实例中去取值,我们就可以将属性和视图绑定在一起
+
+      return vm.$options.render.call(vm); //将AST语法转译后后生成的render方法
+    }; //_c('div',{},...children)
+
+
+    Vue.prototype._c = function () {
+      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._v = function () {
+      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._s = function (value) {
+      if (_typeof(value) !== 'object') return value;
+      return JSON.stringify(value);
+    };
+
+    Vue.prototype.update = function (vnode) {
+      // 将vnode转换成真实dom
+      var vm = this;
+      var el = vm.$el; // patch 既有初始化的功能 又有更新的功能
+
+      patch(el, vnode);
+    };
+  }
+  function mountComponent(vm, el) {
+    // 这里的el是通过querySelector处理过的
+    vm.$el = el; //1.调用render函数产生虚拟dom
+    // vm._render() // vm.$options.render 生成虚拟节点
+    //2.根据虚拟dom生成真实dom
+    // console.log(vm._render());
+
+    vm.update(vm._render()); //3.插入到真实dom
+  } // Vue核心流程  
+  // 1) 创建了响应式数据
+  // 2) 模板转换成ast语法树
+  // 3) 将ast语法树转换成render函数
+  // 4) 后续每次数据更新可以直接执行render函数(无需再次执行ast转换的过程)
+  // render函数会产生虚拟节点(使用响应式数据)
+  // 根据生成的虚拟节点创建真实的dom
 
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
   var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
@@ -331,13 +441,15 @@
 
   function compileToTFunction(template) {
     // 1.将template转换成ast语法树
-    var ast = parseHTML(template); // console.log(ast);
+    var ast = parseHTML(template); // console.log('template:', template);
+    // console.log('ast:', ast);
     // 2.生成render函数 (render方法执行的返回的结果就是虚拟dom)
 
     var code = genCode(ast); //生成render函数的字符串
 
     code = "with(this){return ".concat(code, "}");
-    var render = new Function(code); // console.log(render.toString());
+    var render = new Function(code); // console.log('render函数:', render);
+    // console.log(render.toString());
     // console.log(template);
 
     return render;
@@ -527,7 +639,7 @@
           ops.render = render;
         }
 
-        mountComponent(vm); //组件的挂载
+        mountComponent(vm, el); //组件的挂载
         // script标签如果引用的是vue.global.js 这个编译过程是在浏览器端的
         // runtime是不包括把模板编译的,这个编译打包的过程是放在loader去转译.vue文件的,用runtime的时候不能使用template标签
       }

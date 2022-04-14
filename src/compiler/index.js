@@ -61,11 +61,14 @@ function genCode (ast) {
 export function compileToTFunction (template) {
   // 1.将template转换成ast语法树
   let ast = parseHTML(template)
-  // console.log(ast);
+  // console.log('template:', template);
+
+  // console.log('ast:', ast);
   // 2.生成render函数 (render方法执行的返回的结果就是虚拟dom)
   let code = genCode(ast) //生成render函数的字符串
   code = `with(this){return ${code}}`
   let render = new Function(code)
+  // console.log('render函数:', render);
   // console.log(render.toString());
   // console.log(template);
   return render
