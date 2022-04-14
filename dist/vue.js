@@ -98,6 +98,99 @@
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id$1++; // 属性的dep需要去收集watcher
+
+      this.subs = []; // 这里面存放着当前属性对应的watcher
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // 这里面我们不希望放置重复的watcher
+        // 并且我们要watcher记录dep
+        // this.subs.push(Dep.target) // 这么写当重复取一个值的时候,会收集重复的watcher
+        Dep.target.addDep(this); // 让watcher去记住dep
+        // dep和watcher是一个多对多的关系(一个属性在多个组件中可以dep=>多个watcher)
+        // 一个组件中由多个属性组成 (一个watcher对应多个dep)
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        }); // 告诉watcher更新了
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null;
+
+  var id = 0; //不同的组件有不同的watcher
+  // 1) 但我们创建渲染watcher的时候,我们会把当前watcher的实例放在Dep.target上面
+  // 2) 调用_render() 会取值走到get上
+  // 每个属性有一个dep(属性就是被观察者), watcher就是观察者(属性变化了就通知观察者来更新) ==> 观察者模式
+
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, fn, options) {
+      _classCallCheck(this, Watcher);
+
+      this.id = id++;
+      this.renderWatcher = options; // 标识是一个渲染watcher
+
+      this.getter = fn; // getter 意味着调用这个函数会发生取值操作
+
+      this.deps = []; // (组件卸载的时候,清除所有的响应式数据,和用到一些计算属性会用到)
+
+      this.depsId = new Set(); // 用来去重dep
+
+      this.get();
+    }
+
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        Dep.target = this; // 静态属性只有一份
+
+        this.getter(); // 会从vm上去取值 这个就是_update(vm,_render())
+
+        Dep.target = null; // 渲染完毕之后清空(避免在js中调用值被收集watcher)
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        // 一个组件对应着多个属性 重复的属性也不用记录
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.deps.push(dep);
+          this.depsId.add(id);
+          dep.addSub(this); // watcher已经记住dep 并且去重了 此时也让dep记住watcher
+        }
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        console.log('update');
+        this.get(); // 重新渲染
+      }
+    }]);
+
+    return Watcher;
+  }(); // 需要给每个属性增加一个dep,目的就是去收集watcher
+
   // h() _c()
   function createElementVNode(vm, tag) {
     var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -172,6 +265,7 @@
       var newElm = createElm(vnode);
       parentElm.insertBefore(newElm, elm.nextSibling);
       parentElm.removeChild(elm);
+      return newElm;
     }
   }
 
@@ -197,12 +291,12 @@
       return JSON.stringify(value);
     };
 
-    Vue.prototype.update = function (vnode) {
+    Vue.prototype._update = function (vnode) {
       // 将vnode转换成真实dom
       var vm = this;
       var el = vm.$el; // patch 既有初始化的功能 又有更新的功能
 
-      patch(el, vnode);
+      vm.$el = patch(el, vnode);
     };
   }
   function mountComponent(vm, el) {
@@ -212,7 +306,13 @@
     //2.根据虚拟dom生成真实dom
     // console.log(vm._render());
 
-    vm.update(vm._render()); //3.插入到真实dom
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+
+    var watchers = new Watcher(vm, updateComponent, true); // true用于标识是渲染watcher
+
+    console.log(watchers); //3.插入到真实dom
   } // Vue核心流程  
   // 1) 创建了响应式数据
   // 2) 模板转换成ast语法树
@@ -539,8 +639,14 @@
     //这个函数是一个闭包
     observe(value); //递归检测 直到是一个简单数据类型为止
 
+    var dep = new Dep(); // 每一个属性都有一个deo用来做依赖收集
+
     Object.defineProperty(data, key, {
       get: function get() {
+        if (Dep.target) {
+          dep.depend(); // 让这个属性的收集器记住这个watcher
+        }
+
         return value;
       },
       set: function set(newValue) {
@@ -548,6 +654,7 @@
         observe(newValue); //赋值的时候再去做一个递归
 
         value = newValue;
+        dep.notify();
       }
     });
   }

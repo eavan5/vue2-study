@@ -1,4 +1,5 @@
 import { newArrayProto } from "./array"
+import Dep from "./dep"
 
 class Observer {
   constructor(data) {
@@ -32,14 +33,21 @@ class Observer {
 
 export function defineReactive (data, key, value) {  //这个函数是一个闭包
   observe(value) //递归检测 直到是一个简单数据类型为止
+
+  let dep = new Dep() // 每一个属性都有一个deo用来做依赖收集
   Object.defineProperty(data, key, {
     get () {
+      if (Dep.target) {
+        dep.depend() // 让这个属性的收集器记住这个watcher
+      }
+
       return value
     },
     set (newValue) {
       if (newValue === value) return
       observe(newValue) //赋值的时候再去做一个递归
       value = newValue
+      dep.notify()
     }
   })
 }

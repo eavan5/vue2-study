@@ -7,10 +7,15 @@
 		<title>Document</title>
 	</head>
 	<body>
+		<!-- 我们可以给模板中的属性 增加一个收集器dep -->
+		<!-- 页面渲染的时候,我们可以将渲染的逻辑(vm_update(vm._render()))封装到watcher中 -->
+		<!-- 让dep去记住这个watcher,稍后属性变化了我们可以找到对应的dep中的watcher进行重新渲染 -->
+		<!-- 观察者模式 -->
 		<div id="app" style="color: red; background-color: #fff">
-			<div key="123" style="color: red">ABC{{name}}</div>
-			<span>姓名:{{name}}</span>
-			<span>今年{{age}}</span>
+			<div>
+				<div key="123" style="color: red">dep{{name}}---{{name}}</div>
+				<span>今年dep{{age}}</span>
+			</div>
 		</div>
 		<script src="./vue.js"></script>
 		<script>
@@ -29,6 +34,11 @@
 				},
 				el: '#app',
 			})
+
+			setTimeout(() => {
+				vm.name = 'liumao'
+				vm._update(vm._render())
+			}, 1000)
 			// console.log(vm)
 			//  1. 模板引擎 性能差 需要正则匹配替换  1.0的时候没有引用虚拟dom的时候  性能很差
 			//  2. 采用虚拟dom  数据变化后比较虚拟dom的差异 最后更新需要更新的地方

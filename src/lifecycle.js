@@ -1,4 +1,5 @@
-import { createElementVNode, createTextVNode } from "./vdom"
+import Watcher from "./observe/watcher"
+import { createElementVNode, createTextVNode } from "../vdom"
 
 function createElm (vnode) {
   let { tag, data, children, text } = vnode
@@ -37,6 +38,7 @@ function patch (oldVNode, vnode) {
     const newElm = createElm(vnode)
     parentElm.insertBefore(newElm, elm.nextSibling)
     parentElm.removeChild(elm)
+    return newElm
   } else {
     //diff算法
   }
@@ -64,11 +66,11 @@ export function initLifecycle (Vue) {
     return JSON.stringify(value)
   }
 
-  Vue.prototype.update = function (vnode) { // 将vnode转换成真实dom
+  Vue.prototype._update = function (vnode) { // 将vnode转换成真实dom
     const vm = this
     const el = vm.$el
     // patch 既有初始化的功能 又有更新的功能
-    patch(el, vnode)
+    vm.$el = patch(el, vnode)
   }
 }
 
@@ -80,7 +82,11 @@ export function mountComponent (vm, el) {  // 这里的el是通过querySelector�
   // vm._render() // vm.$options.render 生成虚拟节点
   //2.根据虚拟dom生成真实dom
   // console.log(vm._render());
-  vm.update(vm._render())
+  const updateComponent = () => {
+    vm._update(vm._render())
+  }
+  const watchers = new Watcher(vm, updateComponent, true) // true用于标识是渲染watcher
+  console.log(watchers);
   //3.插入到真实dom
 }
 
