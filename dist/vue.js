@@ -183,13 +183,97 @@
     }, {
       key: "update",
       value: function update() {
-        console.log('update');
-        this.get(); // 重新渲染
+        // console.log('update');
+        // this.get() // 重新渲染
+        queueWatcher(this); // 把当前的watcher暂存起来
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        this.get();
       }
     }]);
 
     return Watcher;
-  }(); // 需要给每个属性增加一个dep,目的就是去收集watcher
+  }();
+
+  var queue = [];
+  var has = {};
+  var pending = false; // 防抖
+
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0);
+    pending = false;
+    queue = [];
+    has = {};
+    flushQueue.forEach(function (q) {
+      return q.run();
+    }); // 在刷新的过程中可能还有新的watcher,重新放到queue中
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true; // 不管update执行多少次  但是最终只执行一轮刷新操作
+
+      if (!pending) {
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+    }
+  }
+
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallBacks() {
+    waiting = false;
+    var cbs = callbacks.slice(0);
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  } // nextTick 没有直接使用某个API 而是采用优雅降级的方式(vue3直接用promise)
+  // 内部先采用的是promise (IE不兼容) 然后降级到MutationObserve(H5的方法) 然后可以考虑IE专享的setImmediate  最后使用setTimeout
+
+
+  var timerFunc;
+
+  if (Promise) {
+    timerFunc = function timerFunc(cb) {
+      Promise.resolve().then(cb);
+    };
+  } else if (MutationObserver) {
+    var observe$1 = new MutationObserver(cb); // 这里面传入的回调是异步执行的
+
+    var textNode = document.createTextNode(1);
+    observe$1.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      textNode.textContent = 2;
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(cb);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(cb);
+    };
+  }
+
+  function nextTick(cb) {
+    callbacks.push(cb); // 维护nextTrick的回调
+
+    if (!waiting) {
+      waiting = true;
+      timerFunc(flushCallBacks); // 最后一起刷新
+    }
+  } // 需要给每个属性增加一个dep,目的就是去收集watcher
 
   // h() _c()
   function createElementVNode(vm, tag) {
@@ -757,6 +841,7 @@
     this._init(options);
   }
 
+  Vue.prototype.$nextTick = nextTick;
   initMixin(Vue); // 扩展了init方法
 
   return Vue;

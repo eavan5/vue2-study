@@ -34,11 +34,87 @@ class Watcher {
     }
   }
   update () {
-    console.log('update');
-    this.get() // 重新渲染
+    // console.log('update');
+    // this.get() // 重新渲染
+    queueWatcher(this) // 把当前的watcher暂存起来
+  }
+  run () {
+    this.get()
   }
 
 }
+
+
+
+let queue = []
+let has = {}
+let pending = false // 防抖
+
+function flushSchedulerQueue () {
+  let flushQueue = queue.slice(0)
+  pending = false
+  queue = []
+  has = {}
+  flushQueue.forEach(q => q.run()) // 在刷新的过程中可能还有新的watcher,重新放到queue中
+}
+
+function queueWatcher (watcher) {
+  let id = watcher.id
+  if (!has[id]) {
+    queue.push(watcher)
+    has[id] = true
+    // 不管update执行多少次  但是最终只执行一轮刷新操作
+    if (!pending) {
+      nextTick(flushSchedulerQueue, 0);
+      pending = true
+    }
+  }
+}
+
+let callbacks = []
+let waiting = false
+function flushCallBacks () {
+  waiting = false
+  let cbs = callbacks.slice(0)
+  callbacks = []
+  cbs.forEach(cb => cb())
+}
+
+// nextTick 没有直接使用某个API 而是采用优雅降级的方式(vue3直接用promise)
+// 内部先采用的是promise (IE不兼容) 然后降级到MutationObserve(H5的方法) 然后可以考虑IE专享的setImmediate  最后使用setTimeout
+
+let timerFunc
+if (Promise) {
+  timerFunc = (cb) => {
+    Promise.resolve().then(cb)
+  }
+} else if (MutationObserver) {
+  let observe = new MutationObserver(cb) // 这里面传入的回调是异步执行的
+  let textNode = document.createTextNode(1)
+  observe.observe(textNode, {
+    characterData: true
+  })
+  timerFunc = () => {
+    textNode.textContent = 2
+  }
+} else if (setImmediate) {
+  timerFunc = () => {
+    setImmediate(cb);
+  }
+} else {
+  timerFunc = () => {
+    setTimeout(cb);
+  }
+}
+
+export function nextTick (cb) {
+  callbacks.push(cb)  // 维护nextTrick的回调
+  if (!waiting) {
+    waiting = true
+    timerFunc(flushCallBacks) // 最后一起刷新
+  }
+}
+
 
 // 需要给每个属性增加一个dep,目的就是去收集watcher
 
