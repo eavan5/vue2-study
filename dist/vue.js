@@ -461,6 +461,16 @@
   // render函数会产生虚拟节点(使用响应式数据)
   // 根据生成的虚拟节点创建真实的dom
 
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      handlers.forEach(function (handler) {
+        return handler.call(vm);
+      });
+    }
+  }
+
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
   var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
   var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 标签开头的正则 捕获的内容是标签名
@@ -855,9 +865,10 @@
 
       vm.$options = mergeOptions(this.constructor.options, options); // 将用户的options合并到构造函数的options上
 
-      console.log(vm.$options); //初始化状态
+      callHook(vm, 'beforeCreate'); //初始化状态
 
       initState(vm);
+      callHook(vm, 'created');
       initLifecycle(Vue);
 
       if (options.el) {
