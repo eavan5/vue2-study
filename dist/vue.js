@@ -4,6 +4,62 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  var strats = {};
+  var LIFECYCLE = ['beforeCreate', 'created'];
+  LIFECYCLE.forEach(function (hook) {
+    strats[hook] = function (p, c) {
+      // {}  {created:function(){}}  = >   {created:[fn]}
+      // {created:[fn]} {created:function(){}}  =>  {created:[fn,fn]}
+      if (c) {
+        // 如果儿子有 父亲有 则合并起来, 否则返回一个数组里面只有儿子
+        if (p) {
+          return p.concat(c);
+        } else {
+          return [c];
+        }
+      } else {
+        return p;
+      }
+    };
+  });
+  function mergeOptions(parent, child) {
+    console.log(parent);
+    var options = {};
+
+    for (var key in parent) {
+      mergeFiled(key);
+    }
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeFiled(_key);
+      }
+    }
+
+    function mergeFiled(key) {
+      // 用策略模式,减少if else
+      if (strats[key]) {
+        options[key] = strats[key](parent[key], child[key]);
+      } else {
+        //如果不在策略中优先采用儿子的,再采用父亲
+        options[key] = child[key] || parent[key];
+      }
+    }
+
+    return options;
+  }
+
+  function initGlobalAPI(Vue) {
+    // 静态方法
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // 我们期望将用户逇选项和全局的options进行合并
+      this.options = mergeOptions(this.options, mixin);
+      return this; // 期望可以链式调用
+    };
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -723,7 +779,7 @@
     //这个函数是一个闭包
     observe(value); //递归检测 直到是一个简单数据类型为止
 
-    var dep = new Dep(); // 每一个属性都有一个deo用来做依赖收集
+    var dep = new Dep(); // 每一个属性都有一个dep用来做依赖收集
 
     Object.defineProperty(data, key, {
       get: function get() {
@@ -795,8 +851,11 @@
     Vue.prototype._init = function (options) {
       //用于初始化操作
       var vm = this; // v,.$options  就是获取用户的配置
+      // 我们定义的全局指令和过滤器....都会挂载到实例上
 
-      vm.$options = options; //初始化状态
+      vm.$options = mergeOptions(this.constructor.options, options); // 将用户的options合并到构造函数的options上
+
+      console.log(vm.$options); //初始化状态
 
       initState(vm);
       initLifecycle(Vue);
@@ -843,6 +902,8 @@
 
   Vue.prototype.$nextTick = nextTick;
   initMixin(Vue); // 扩展了init方法
+
+  initGlobalAPI(Vue);
 
   return Vue;
 

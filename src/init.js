@@ -1,13 +1,16 @@
 import { initLifecycle, mountComponent } from './lifecycle'
 import { compileToTFunction } from './compiler'
 import { initState } from './state'
+import { mergeOptions } from './utils'
 
 
 export function initMixin (Vue) {  // 给vue真假init方法
   Vue.prototype._init = function (options) { //用于初始化操作
     const vm = this
     // v,.$options  就是获取用户的配置
-    vm.$options = options
+    // 我们定义的全局指令和过滤器....都会挂载到实例上
+    vm.$options = mergeOptions(this.constructor.options, options) // 将用户的options合并到构造函数的options上
+    console.log(vm.$options);
 
     //初始化状态
     initState(vm)

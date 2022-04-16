@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<!-- 我们可以给模板中的属性 增加一个收集器dep -->
+		<!-- 页面渲染的时候,我们可以将渲染的逻辑(vm_update(vm._render()))封装到watcher中 -->
+		<!-- 让dep去记住这个watcher,稍后属性变化了我们可以找到对应的dep中的watcher进行重新渲染 -->
+		<!-- 观察者模式 -->
+		<div id="app" style="color: red; background-color: #fff">
+			<div>
+				<div key="123" style="color: red">dep{{name}}---{{name}}</div>
+				<span>今年dep{{age}}</span>
+			</div>
+		</div>
+		<script src="./vue.js"></script>
+		<script>
+			Vue.mixin({
+				created() {
+					console.log('vue mixin111 created')
+				},
+				data() {
+					return {
+						xxx: 100,
+					}
+				},
+			})
+			Vue.mixin({
+				created() {
+					console.log('vue mixin222 created')
+				},
+				data() {
+					return {
+						xxx: 100,
+					}
+				},
+			})
+
+			// 发布订阅
+			console.log(Vue.options) // 存储在options的created上
+			// 内部会将多个created合并成一个队列
+			const vm = new Vue({
+				//代理数据
+				data() {
+					return {
+						name: 'wumao',
+						age: 16,
+						info: {
+							sex: 'man',
+							hobby: 'none',
+						},
+						hobby: [1, 2, 3, { age: 1 }],
+					}
+				},
+				el: '#app',
+				created() {
+					console.log(this.xxx) // 数据来源不明确
+					console.log(this.$data)
+				},
+			})
+			// mixin能混入一些数据和功能
+		</script>
+	</body>
+</html>
