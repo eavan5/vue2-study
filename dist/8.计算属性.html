@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<!-- 计算属性是有缓存的
+依赖的值发生变化才会重新执行用户的方法，计算属性中维护一个dirty属性，默认计算属性不会立即执行
+计算属性就是一个defineProperty -->
+		<div id="app" style="color: red; background-color: #fff">
+			<div>
+				<div key="123" style="color: red">{{firstName}}</div>
+				<span>计算属性{{fullName}}{{fullName}}{{fullName}}</span>
+			</div>
+		</div>
+		<script src="./vue.js"></script>
+
+		<script>
+			const vm = new Vue({
+				el: '#app',
+				data() {
+					return {
+						firstName: 'wu',
+						lastName: 'mao',
+					}
+				},
+				computed: {
+					fullName() {
+						console.log('run')
+						return this.firstName + this.lastName
+					},
+				},
+				created() {
+					// setTimeout(() => {
+					// 	this.firstName = 'liumao'
+					// }, 1000)
+				},
+			})
+			// mixin能混入一些数据和功能
+		</script>
+	</body>
+</html>

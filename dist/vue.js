@@ -193,6 +193,17 @@
   }();
 
   Dep.target = null;
+  var stack = [];
+  function pushTarget(watcher) {
+    // 渲染完入栈
+    stack.push(watcher);
+    Dep.target = watcher;
+  }
+  function popTarget() {
+    // 渲染完出栈
+    stack.pop();
+    Dep.target = stack.at(-1);
+  }
 
   var id = 0; //不同的组件有不同的watcher
   // 1) 但我们创建渲染watcher的时候,我们会把当前watcher的实例放在Dep.target上面
@@ -203,6 +214,7 @@
     function Watcher(vm, fn, options) {
       _classCallCheck(this, Watcher);
 
+      this.vm = vm;
       this.id = id++;
       this.renderWatcher = options; // 标识是一个渲染watcher
 
@@ -212,17 +224,31 @@
 
       this.depsId = new Set(); // 用来去重dep
 
-      this.get();
+      this.lazy = options.lazy;
+      this.dirty = this.lazy; // 缓存值
+
+      this.lazy ? undefined : this.get();
     }
 
     _createClass(Watcher, [{
+      key: "evaluate",
+      value: function evaluate() {
+        this.value = this.get(); // 获取到用户函数的返回值,并且还要标识为脏值
+
+        this.dirty = false;
+      }
+    }, {
       key: "get",
       value: function get() {
-        Dep.target = this; // 静态属性只有一份
+        // Dep.target = this 
+        pushTarget(this); // 静态属性只有一份
 
-        this.getter(); // 会从vm上去取值 这个就是_update(vm,_render())
+        var value = this.getter.call(this.vm); // 会从vm上去取值 这个就是_update(vm,_render())
+        // Dep.target = null 
 
-        Dep.target = null; // 渲染完毕之后清空(避免在js中调用值被收集watcher)
+        popTarget(); // 渲染完毕之后清空(避免在js中调用值被收集watcher)
+
+        return value;
       }
     }, {
       key: "addDep",
@@ -829,6 +855,10 @@
     if (opts.data) {
       initData(vm);
     }
+
+    if (opts.computed) {
+      initComputed(vm);
+    }
   }
 
   function proxy(vm, target, key) {
@@ -854,6 +884,50 @@
         proxy(vm, '_data', key);
       }
     }
+  }
+
+  function initComputed(vm) {
+    var computed = vm.$options.computed;
+    var watchers = vm._computedWatchers = {}; // 将计算属性watcher保存到vm上
+
+    for (var key in computed) {
+      var userDef = computed[key];
+      var fn = typeof userDef === 'function' ? userDef : userDef.get; // 计算属性的get方法
+      // 我们需要监控计算属性中get的变化 ,将属性和watcher关联起来
+
+      watchers[key] = new Watcher(vm, fn, {
+        lazy: true
+      }); // 如果直接new 就会执行fn,但是我们在计算属性中不需要他立即执行,所以lazy:true
+
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  function defineComputed(target, key, userDef) {
+    // const getter = typeof userDef === 'function' ? userDef : userDef.get
+    var setter = userDef.set || function () {
+      return [];
+    }; // 可以通过实例拿到对应的属性
+
+
+    Object.defineProperty(target, key, {
+      get: createComputedGetter(key),
+      set: setter
+    });
+  }
+
+  function createComputedGetter(key) {
+    // 我们要检测是否执行这个getter
+    return function () {
+      var watcher = this._computedWatchers[key]; // 获取对应属性的watcher
+
+      if (watcher.dirty) {
+        // 如果是脏值 就去执行用户传入的函数
+        watcher.evaluate(); // 求职之后 dirty变成了false 下次就不执行了
+      }
+
+      return watcher.value; // 最后返回的是watcher上的值
+    };
   }
 
   function initMixin(Vue) {

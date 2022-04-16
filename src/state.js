@@ -1,4 +1,5 @@
 import { observe } from "./observe/index"
+import Watcher from "./observe/watcher"
 
 export function initState (vm) {
   const opts = vm.$options
@@ -7,6 +8,9 @@ export function initState (vm) {
   // }
   if (opts.data) {
     initData(vm)
+  }
+  if (opts.computed) {
+    initComputed(vm)
   }
 }
 
@@ -34,5 +38,43 @@ function initData (vm) {
     if (Object.hasOwnProperty.call(data, key)) {
       proxy(vm, '_data', key)
     }
+  }
+}
+
+
+function initComputed (vm) {
+  const computed = vm.$options.computed
+  let watchers = vm._computedWatchers = {} // 将计算属性watcher保存到vm上
+  for (const key in computed) {
+    let userDef = computed[key]
+
+    const fn = typeof userDef === 'function' ? userDef : userDef.get // 计算属性的get方法
+    // 我们需要监控计算属性中get的变化 ,将属性和watcher关联起来
+    watchers[key] = new Watcher(vm, fn, { lazy: true }) // 如果直接new 就会执行fn,但是我们在计算属性中不需要他立即执行,所以lazy:true
+
+    defineComputed(vm, key, userDef)
+  }
+}
+
+function defineComputed (target, key, userDef) {
+  // const getter = typeof userDef === 'function' ? userDef : userDef.get
+  const setter = userDef.set || (() => [])
+
+  // 可以通过实例拿到对应的属性
+  Object.defineProperty(target, key, {
+    get: createComputedGetter(key),
+    set: setter
+  })
+}
+
+function createComputedGetter (key) {
+  // 我们要检测是否执行这个getter
+  return function () {
+    const watcher = this._computedWatchers[key] // 获取对应属性的watcher
+    if (watcher.dirty) {
+      // 如果是脏值 就去执行用户传入的函数
+      watcher.evaluate()  // 求职之后 dirty变成了false 下次就不执行了
+    }
+    return watcher.value // 最后返回的是watcher上的值
   }
 }

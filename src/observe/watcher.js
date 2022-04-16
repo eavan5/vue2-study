@@ -1,4 +1,4 @@
-import Dep from "./dep"
+import Dep, { popTarget, pushTarget } from "./dep"
 
 let id = 0  //不同的组件有不同的watcher
 
@@ -11,18 +11,30 @@ let id = 0  //不同的组件有不同的watcher
 
 class Watcher {
   constructor(vm, fn, options) {
+    this.vm = vm
     this.id = id++
     this.renderWatcher = options // 标识是一个渲染watcher
     this.getter = fn // getter 意味着调用这个函数会发生取值操作
     this.deps = [] // (组件卸载的时候,清除所有的响应式数据,和用到一些计算属性会用到)
     this.depsId = new Set() // 用来去重dep
-    this.get()
-  }
+    this.lazy = options.lazy
+    this.dirty = this.lazy // 缓存值
 
+
+    this.lazy ? undefined : this.get()
+  }
+  evaluate () {
+    this.value = this.get() // 获取到用户函数的返回值,并且还要标识为脏值
+    this.dirty = false
+
+  }
   get () {
-    Dep.target = this // 静态属性只有一份
-    this.getter() // 会从vm上去取值 这个就是_update(vm,_render())
-    Dep.target = null // 渲染完毕之后清空(避免在js中调用值被收集watcher)
+    // Dep.target = this 
+    pushTarget(this) // 静态属性只有一份
+    const value = this.getter.call(this.vm) // 会从vm上去取值 这个就是_update(vm,_render())
+    // Dep.target = null 
+    popTarget() // 渲染完毕之后清空(避免在js中调用值被收集watcher)
+    return value
   }
 
   addDep (dep) { // 一个组件对应着多个属性 重复的属性也不用记录

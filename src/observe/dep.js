@@ -24,4 +24,16 @@ class Dep {
 
 Dep.target = null
 
+let stack = []
+
+export function pushTarget (watcher) {  // 渲染完入栈
+  stack.push(watcher)
+  Dep.target = watcher
+}
+
+export function popTarget () { // 渲染完出栈
+  stack.pop()
+  Dep.target = stack.at(-1)
+}
+
 export default Dep
