@@ -11,6 +11,7 @@ class Dep {
     // this.subs.push(Dep.target) // 这么写当重复取一个值的时候,会收集重复的watcher
 
     Dep.target.addDep(this) // 让watcher去记住dep
+    // debugger
     // dep和watcher是一个多对多的关系(一个属性在多个组件中可以dep=>多个watcher)
     // 一个组件中由多个属性组成 (一个watcher对应多个dep)
   }

@@ -45,10 +45,25 @@ class Watcher {
       dep.addSub(this)  // watcher已经记住dep 并且去重了 此时也让dep记住watcher
     }
   }
+  depend () {
+    let i = this.deps.length
+    console.log('deps:', this.deps);
+    while (i--) {
+      // dep去收集watcher
+      this.deps[i].depend() // 让计算属性watcher也收集渲染watcher
+    }
+  }
   update () {
-    // console.log('update');
-    // this.get() // 重新渲染
-    queueWatcher(this) // 把当前的watcher暂存起来
+    if (this.lazy) {
+      // 如果计算属性变化了,则将它重新标为脏值
+      this.dirty = true
+    } else {
+      // console.log('update');
+      // this.get() // 重新渲染
+      queueWatcher(this) // 把当前的watcher暂存起来
+    }
+
+
   }
   run () {
     this.get()

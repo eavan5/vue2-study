@@ -1,3 +1,4 @@
+import Dep from "./observe/dep"
 import { observe } from "./observe/index"
 import Watcher from "./observe/watcher"
 
@@ -67,6 +68,7 @@ function defineComputed (target, key, userDef) {
   })
 }
 
+// 计算属性根本不会去收集依赖,只会让自己的依赖属性去收集依赖  vue3跟vue2不一样
 function createComputedGetter (key) {
   // 我们要检测是否执行这个getter
   return function () {
@@ -74,6 +76,9 @@ function createComputedGetter (key) {
     if (watcher.dirty) {
       // 如果是脏值 就去执行用户传入的函数
       watcher.evaluate()  // 求职之后 dirty变成了false 下次就不执行了
+    }
+    if (Dep.target) { //计算属性watcher出栈之后,还剩下一个渲染watcher,我应该让计算属性watcher里面的属性也去收集上一层的渲染watcher
+      watcher.depend()
     }
     return watcher.value // 最后返回的是watcher上的值
   }

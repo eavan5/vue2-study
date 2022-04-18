@@ -172,6 +172,7 @@
         // 并且我们要watcher记录dep
         // this.subs.push(Dep.target) // 这么写当重复取一个值的时候,会收集重复的watcher
         Dep.target.addDep(this); // 让watcher去记住dep
+        // debugger
         // dep和watcher是一个多对多的关系(一个属性在多个组件中可以dep=>多个watcher)
         // 一个组件中由多个属性组成 (一个watcher对应多个dep)
       }
@@ -263,11 +264,27 @@
         }
       }
     }, {
+      key: "depend",
+      value: function depend() {
+        var i = this.deps.length;
+        console.log('deps:', this.deps);
+
+        while (i--) {
+          // dep去收集watcher
+          this.deps[i].depend(); // 让计算属性watcher也收集渲染watcher
+        }
+      }
+    }, {
       key: "update",
       value: function update() {
-        // console.log('update');
-        // this.get() // 重新渲染
-        queueWatcher(this); // 把当前的watcher暂存起来
+        if (this.lazy) {
+          // 如果计算属性变化了,则将它重新标为脏值
+          this.dirty = true;
+        } else {
+          // console.log('update');
+          // this.get() // 重新渲染
+          queueWatcher(this); // 把当前的watcher暂存起来
+        }
       }
     }, {
       key: "run",
@@ -914,7 +931,8 @@
       get: createComputedGetter(key),
       set: setter
     });
-  }
+  } // 计算属性根本不会去收集依赖,只会让自己的依赖属性去收集依赖  vue3跟vue2不一样
+
 
   function createComputedGetter(key) {
     // 我们要检测是否执行这个getter
@@ -924,6 +942,11 @@
       if (watcher.dirty) {
         // 如果是脏值 就去执行用户传入的函数
         watcher.evaluate(); // 求职之后 dirty变成了false 下次就不执行了
+      }
+
+      if (Dep.target) {
+        //计算属性watcher出栈之后,还剩下一个渲染watcher,我应该让计算属性watcher里面的属性也去收集上一层的渲染watcher
+        watcher.depend();
       }
 
       return watcher.value; // 最后返回的是watcher上的值
