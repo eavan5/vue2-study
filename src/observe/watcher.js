@@ -10,18 +10,26 @@ let id = 0  //不同的组件有不同的watcher
 
 
 class Watcher {
-  constructor(vm, fn, options) {
+  constructor(vm, exprOrFn, options, cb) {
     this.vm = vm
     this.id = id++
     this.renderWatcher = options // 标识是一个渲染watcher
-    this.getter = fn // getter 意味着调用这个函数会发生取值操作
+
+    if (typeof exprOrFn === 'string') {
+      this.getter = function () {
+        return vm[exprOrFn]
+      }
+    } else {
+      this.getter = exprOrFn // getter 意味着调用这个函数会发生取值操作
+    }
     this.deps = [] // (组件卸载的时候,清除所有的响应式数据,和用到一些计算属性会用到)
     this.depsId = new Set() // 用来去重dep
     this.lazy = options.lazy
     this.dirty = this.lazy // 缓存值
+    this.cb = cb // watch api用的
+    this.user = options.user // 用户标识是不是用户自己的watcher
 
-
-    this.lazy ? undefined : this.get()
+    this.value = this.lazy ? undefined : this.get()
   }
   evaluate () {
     this.value = this.get() // 获取到用户函数的返回值,并且还要标识为脏值
@@ -66,7 +74,11 @@ class Watcher {
 
   }
   run () {
-    this.get()
+    let oldValue = this.value
+    let newValue = this.get() // 渲染的时候用最新的vm来渲染
+    if (this.user) {
+      this.cb.call(this.vm, newValue, oldValue)
+    }
   }
 
 }

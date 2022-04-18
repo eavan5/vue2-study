@@ -212,14 +212,20 @@
   // 每个属性有一个dep(属性就是被观察者), watcher就是观察者(属性变化了就通知观察者来更新) ==> 观察者模式
 
   var Watcher = /*#__PURE__*/function () {
-    function Watcher(vm, fn, options) {
+    function Watcher(vm, exprOrFn, options, cb) {
       _classCallCheck(this, Watcher);
 
       this.vm = vm;
       this.id = id++;
       this.renderWatcher = options; // 标识是一个渲染watcher
 
-      this.getter = fn; // getter 意味着调用这个函数会发生取值操作
+      if (typeof exprOrFn === 'string') {
+        this.getter = function () {
+          return vm[exprOrFn];
+        };
+      } else {
+        this.getter = exprOrFn; // getter 意味着调用这个函数会发生取值操作
+      }
 
       this.deps = []; // (组件卸载的时候,清除所有的响应式数据,和用到一些计算属性会用到)
 
@@ -228,7 +234,11 @@
       this.lazy = options.lazy;
       this.dirty = this.lazy; // 缓存值
 
-      this.lazy ? undefined : this.get();
+      this.cb = cb; // watch api用的
+
+      this.user = options.user; // 用户标识是不是用户自己的watcher
+
+      this.value = this.lazy ? undefined : this.get();
     }
 
     _createClass(Watcher, [{
@@ -289,7 +299,12 @@
     }, {
       key: "run",
       value: function run() {
-        this.get();
+        var oldValue = this.value;
+        var newValue = this.get(); // 渲染的时候用最新的vm来渲染
+
+        if (this.user) {
+          this.cb.call(this.vm, newValue, oldValue);
+        }
       }
     }]);
 
@@ -865,7 +880,8 @@
   }
 
   function initState(vm) {
-    var opts = vm.$options; // if (opts.props) {
+    var opts = vm.$options;
+    console.log(opts); // if (opts.props) {
     //   initProps()
     // }
 
@@ -875,6 +891,10 @@
 
     if (opts.computed) {
       initComputed(vm);
+    }
+
+    if (opts.watch) {
+      initWatch(vm);
     }
   }
 
@@ -918,6 +938,32 @@
 
       defineComputed(vm, key, userDef);
     }
+  }
+
+  function initWatch(vm) {
+    var watch = vm.$options.watch;
+
+    for (var key in watch) {
+      // 字符串 数组 函数
+      var handler = watch[key];
+
+      if (Array.isArray(handler)) {
+        for (var i = 0; i < handler.length; i++) {
+          createWatcher(vm, key, handler[i]);
+        }
+      } else {
+        createWatcher(vm, key, handler);
+      }
+    }
+  }
+
+  function createWatcher(vm, key, handler) {
+    // 字符串 函数 对象(不写了)
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+
+    return vm.$watch(key, handler);
   }
 
   function defineComputed(target, key, userDef) {
@@ -1011,7 +1057,17 @@
   Vue.prototype.$nextTick = nextTick;
   initMixin(Vue); // 扩展了init方法
 
-  initGlobalAPI(Vue);
+  initGlobalAPI(Vue); // 最终调用的都是这个方法
+
+  Vue.prototype.$watch = function (exprOrFn, cb) {
+    // console.log(exprOrFn, cb);
+    // firstName
+    // ()=>vm.firstName
+    // firstName的值变化了 直接执行cb函数
+    new Watcher(this, exprOrFn, {
+      user: true
+    }, cb);
+  };
 
   return Vue;
 

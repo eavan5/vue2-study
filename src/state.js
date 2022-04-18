@@ -4,6 +4,7 @@ import Watcher from "./observe/watcher"
 
 export function initState (vm) {
   const opts = vm.$options
+  console.log(opts);
   // if (opts.props) {
   //   initProps()
   // }
@@ -12,6 +13,9 @@ export function initState (vm) {
   }
   if (opts.computed) {
     initComputed(vm)
+  }
+  if (opts.watch) {
+    initWatch(vm)
   }
 }
 
@@ -55,6 +59,29 @@ function initComputed (vm) {
 
     defineComputed(vm, key, userDef)
   }
+}
+
+function initWatch (vm) {
+  let watch = vm.$options.watch
+  for (const key in watch) { // 字符串 数组 函数
+    const handler = watch[key];
+    if (Array.isArray(handler)) {
+      for (let i = 0; i < handler.length; i++) {
+        createWatcher(vm, key, handler[i])
+      }
+    } else {
+      createWatcher(vm, key, handler)
+    }
+  }
+}
+
+
+function createWatcher (vm, key, handler) {
+  // 字符串 函数 对象(不写了)
+  if (typeof handler === 'string') {
+    handler = vm[handler]
+  }
+  return vm.$watch(key, handler)
 }
 
 function defineComputed (target, key, userDef) {

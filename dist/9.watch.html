@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<!-- 计算属性是有缓存的
+依赖的值发生变化才会重新执行用户的方法，计算属性中维护一个dirty属性，默认计算属性不会立即执行
+计算属性就是一个defineProperty -->
+		<div id="app" style="color: red; background-color: #fff">
+			<div>
+				<span>计算属性{{firstName}}</span>
+			</div>
+		</div>
+		<script src="./vue.js"></script>
+
+		<script>
+			const vm = new Vue({
+				el: '#app',
+				data() {
+					return {
+						firstName: 'wu',
+						lastName: 'mao',
+					}
+				},
+				computed: {
+					fullName() {
+						console.log('run')
+						return this.firstName + this.lastName
+					},
+				},
+				created() {
+					this.firstName = '666'
+					this.lastName = '999'
+					// setTimeout(() => {
+					// 	this.firstName = 'liumao' // 会执行计算属性watcher去操作  让dirty再变成true
+					// }, 1000)
+				},
+				watch: {
+					// 直接一个函数
+					firstName(newVal, oldVal) {
+						console.log(newVal, oldVal)
+					},
+					//数组写法
+					lastName: [
+						(newVal, oldVal) => {
+							console.log(newVal, oldVal)
+						},
+						(newVal, oldVal) => {
+							console.log(newVal, oldVal)
+						},
+					],
+				},
+			})
+			// 底层就算是你写的上面的方法,也会被转换成$watch的写法
+			vm.$watch(
+				() => vm.firstName,
+				() => {
+					console.log('$watch')
+				}
+			)
+			vm.firstName = '999'
+			console.log(vm)
+			// mixin能混入一些数据和功能
+		</script>
+	</body>
+</html>
