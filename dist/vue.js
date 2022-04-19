@@ -254,7 +254,7 @@
         // Dep.target = this 
         pushTarget(this); // 静态属性只有一份
 
-        var value = this.getter.call(this.vm); // 会从vm上去取值 这个就是_update(vm,_render())
+        var value = this.getter.call(this.vm); // 会从vm上去取值 如果是渲染watcher这个就是_update(vm,_render())
         // Dep.target = null 
 
         popTarget(); // 渲染完毕之后清空(避免在js中调用值被收集watcher)
@@ -773,7 +773,7 @@
       }
 
       // 重写了数组的方法
-      var result = oldArrayProto.call.apply(oldArrayProto, [this].concat(args)); //内部调用原来的方法
+      var result = oldArrayProto[method].call(this, args); //内部调用原来的方法
       //我们需要对新增的数据再进行劫持
 
       var inserted;
@@ -793,9 +793,11 @@
       if (inserted) {
         //如果有新增的数据 再对他进行劫持
         ob.observeArray(inserted);
-      }
+      } // console.log('新增的内容');
 
-      console.log('新增的内容');
+
+      ob.dep.notify(); // 数组变化了 通知对应的watcher实现更新逻辑
+
       return result;
     };
   });
@@ -804,8 +806,10 @@
     function Observer(data) {
       _classCallCheck(this, Observer);
 
+      this.dep = new Dep(); // 专门为数组设计的
       // object.defineProperty只能劫持已经存在的属性,后增($set)的或者删除($delete)的不会影响
       // 这样不仅给data增加了新的法法,还给数据加了一个标识 如果有这个就说明已经被观察过了
+
       Object.defineProperty(data, '__ob__', {
         value: this,
         enumerable: false //防止被循环引用
@@ -841,11 +845,23 @@
     }]);
 
     return Observer;
-  }();
+  }(); // 嵌套就会深层次递归 , 递归多了性能差  不存在属性监控不到,存在的属性要重写方法  所以vue3使用proxy去优化
+
+
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
 
   function defineReactive(data, key, value) {
     //这个函数是一个闭包
-    observe(value); //递归检测 直到是一个简单数据类型为止
+    var childOb = observe(value); //递归检测 直到是一个简单数据类型为止 childOb 用来收集依赖的
 
     var dep = new Dep(); // 每一个属性都有一个dep用来做依赖收集
 
@@ -853,6 +869,14 @@
       get: function get() {
         if (Dep.target) {
           dep.depend(); // 让这个属性的收集器记住这个watcher
+
+          if (childOb) {
+            childOb.dep.depend(); // 让数组和对象本身也实现依赖依赖
+
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
         }
 
         return value;
@@ -987,11 +1011,12 @@
 
       if (watcher.dirty) {
         // 如果是脏值 就去执行用户传入的函数
-        watcher.evaluate(); // 求职之后 dirty变成了false 下次就不执行了
+        watcher.evaluate(); // 求值之后 dirty变成了false 下次就不执行了
+        // 并且求值的时候会去执行计算属性的回调函数,此时又会出触发回调里面的data的依赖收集,它此时会把dep全部收集到计算属性watcher的deps上
       }
 
       if (Dep.target) {
-        //计算属性watcher出栈之后,还剩下一个渲染watcher,我应该让计算属性watcher里面的属性也去收集上一层的渲染watcher
+        //计算属性watcher出栈之后,还剩下一个渲染watcher,我们应该让计算属性watcher里面的依赖dep也去收集上一层的渲染watcher
         watcher.depend();
       }
 

@@ -102,9 +102,10 @@ function createComputedGetter (key) {
     const watcher = this._computedWatchers[key] // 获取对应属性的watcher
     if (watcher.dirty) {
       // 如果是脏值 就去执行用户传入的函数
-      watcher.evaluate()  // 求职之后 dirty变成了false 下次就不执行了
+      watcher.evaluate()  // 求值之后 dirty变成了false 下次就不执行了
+      // 并且求值的时候会去执行计算属性的回调函数,此时又会出触发回调里面的data的依赖收集,它此时会把dep全部收集到计算属性watcher的deps上
     }
-    if (Dep.target) { //计算属性watcher出栈之后,还剩下一个渲染watcher,我应该让计算属性watcher里面的属性也去收集上一层的渲染watcher
+    if (Dep.target) { //计算属性watcher出栈之后,还剩下一个渲染watcher,我们应该让计算属性watcher里面的依赖dep也去收集上一层的渲染watcher
       watcher.depend()
     }
     return watcher.value // 最后返回的是watcher上的值

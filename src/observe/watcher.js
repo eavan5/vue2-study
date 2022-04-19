@@ -39,7 +39,7 @@ class Watcher {
   get () {
     // Dep.target = this 
     pushTarget(this) // 静态属性只有一份
-    const value = this.getter.call(this.vm) // 会从vm上去取值 这个就是_update(vm,_render())
+    const value = this.getter.call(this.vm) // 会从vm上去取值 如果是渲染watcher这个就是_update(vm,_render())
     // Dep.target = null 
     popTarget() // 渲染完毕之后清空(避免在js中调用值被收集watcher)
     return value
