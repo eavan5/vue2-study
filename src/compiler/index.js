@@ -63,9 +63,9 @@ export function compileToTFunction (template) {
   let ast = parseHTML(template)
   // console.log('template:', template);
 
-  // console.log('ast:', ast);
+  console.log('ast:', ast);
   // 2.生成render函数 (render方法执行的返回的结果就是虚拟dom)
-  let code = genCode(ast) //生成render函数的字符串
+  let code = genCode(ast) //生成render函数的字符串 "_c('li',{style:{"color":"yellow"}},_v(_s(name)),_c('div',undefined,_v("11"),_c('div',undefined)))"
   code = `with(this){return ${code}}`
   let render = new Function(code)
   // console.log('render函数:', render);

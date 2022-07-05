@@ -21,7 +21,7 @@ LIFECYCLE.forEach(hook => {
 
 
 export function mergeOptions (parent, child) {
-  console.log(parent);
+  // console.log(parent);
   const options = {}
   for (const key in parent) {
     mergeFiled(key)

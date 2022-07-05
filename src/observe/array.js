@@ -16,7 +16,7 @@ let methods = [
 
 methods.forEach(method => {
   newArrayProto[method] = function (...args) {  // 重写了数组的方法
-    const result = oldArrayProto[method].call(this, args)  //内部调用原来的方法
+    const result = oldArrayProto[method].call(this, ...args)  //内部调用原来的方法
     //我们需要对新增的数据再进行劫持
     let inserted
     const ob = this.__ob__

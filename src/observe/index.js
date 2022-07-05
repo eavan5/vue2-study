@@ -3,7 +3,7 @@ import Dep from "./dep"
 
 class Observer {
   constructor(data) {
-    this.dep = new Dep(); // 专门为数组设计的
+    this.dep = new Dep(); // 这里的dep专门为数组设计的
 
     // object.defineProperty只能劫持已经存在的属性,后增($set)的或者删除($delete)的不会影响
 
@@ -54,12 +54,11 @@ export function defineReactive (data, key, value) {  //这个函数是一个闭�
         dep.depend() // 让这个属性的收集器记住这个watcher
         if (childOb) {
           childOb.dep.depend(); // 让数组和对象本身也实现依赖依赖
-          if (Array.isArray(value)) {
+          if (Array.isArray(value)) { // 如果是数组,也让数组的dep做依赖收集
             dependArray(value)
           }
         }
       }
-
       return value
     },
     set (newValue) {

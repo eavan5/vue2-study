@@ -23,7 +23,6 @@ let render1 = compileToTFunction(`<ul style='color:yellow'>
 <li key='a'>a</li>
 <li key='b'>b</li>
 <li key='c'>c</li>
-<li key='d'>d</li>
 </ul>`)
 let vm1 = new Vue({ data: { name: 'wumao' } })
 let preVnode = render1.call(vm1)
@@ -35,10 +34,10 @@ document.body.appendChild(el)
 
 // 如果用户自己操作dom  可能会有些问题 比如性能浪费
 let render2 = compileToTFunction(`<ul style='background:red'>
-<li key='d'>d</li>
 <li key='c'>c</li>
 <li key='a'>a</li>
 <li key='b'>b</li>
+<li key='d'>d</li>
 </ul>`)
 let vm2 = new Vue({ data: { name: '9999' } })
 let nextVnode = render2.call(vm2)

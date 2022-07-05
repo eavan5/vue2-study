@@ -1,10 +1,10 @@
 import Dep from "./observe/dep"
 import { observe } from "./observe/index"
-import Watcher from "./observe/watcher"
+import Watcher, { nextTick } from "./observe/watcher"
 
 export function initState (vm) {
   const opts = vm.$options
-  console.log(opts);
+  // console.log(opts);
   // if (opts.props) {
   //   initProps()
   // }
@@ -38,7 +38,7 @@ function initData (vm) {
   vm._data = data
   observe(data)
 
-  // 将vm._data 用vm来代理就可以了
+  // 将vm._data 用vm来代理就可以直接使用this.xxx访问到data里面的数据
   for (const key in data) {
     if (Object.hasOwnProperty.call(data, key)) {
       proxy(vm, '_data', key)
@@ -109,5 +109,18 @@ function createComputedGetter (key) {
       watcher.depend()
     }
     return watcher.value // 最后返回的是watcher上的值
+  }
+}
+
+export function initStateMixin (Vue) {
+  Vue.prototype.$nextTick = nextTick
+
+  // 最终调用的都是这个方法
+  Vue.prototype.$watch = function (exprOrFn, cb, options = {}) {
+    // console.log(exprOrFn, cb);
+    // firstName
+    // ()=>vm.firstName
+    // firstName的值变化了 直接执行cb函数
+    new Watcher(this, exprOrFn, { user: true }, cb)
   }
 }

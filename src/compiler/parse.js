@@ -10,12 +10,40 @@ const startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
 //vue3采用的不是正则
 // 对模板进行编译处理
 export function parseHTML (html) { // vue2中 html最开始肯定是一个<
-
   const ELEMENT_TYPE = 1
   const TEXT_TYPE = 3
   const stack = []
   let currentParent // 指向的是栈中的最后一个
   let root
+
+  while (html) {
+    // 如果textEnd为0 这是开始或者结束标签
+    // 如果>0 说明是文本的结束位置
+    let textEnd = html.indexOf('<') // 如果indexOf中的索引是0,说明是一个标签
+    if (textEnd === 0) {
+      const startTagMatch = parseStartTag() //开始标签的匹配结果
+      if (startTagMatch) {
+        start(startTagMatch.tagName, startTagMatch.attrs)
+        continue
+      }
+
+      const endTagMatch = html.match(endTag)  //处理结束标签 </xxx>
+      if (endTagMatch) {
+        advance(endTagMatch[0].length)
+        end(endTagMatch[1])
+        continue
+      }
+    }
+    if (textEnd > 0) { //去除<之后说明有文本了
+      let text = html.substring(0, textEnd)
+      if (text) {
+        chars(text)
+        advance(text.length)
+      }
+
+    }
+
+  }
 
   //最终要转换成一颗抽象语法树
 
@@ -98,35 +126,5 @@ export function parseHTML (html) { // vue2中 html最开始肯定是一个<
     return false //不是开始标签
   }
 
-
-  while (html) {
-    // 如果textEnd为0 这是开始或者结束标签
-    // 如果>0 说明是文本的结束位置
-    let textEnd = html.indexOf('<') // 如果indexOf中的索引是0,说明是一个标签
-    if (textEnd === 0) {
-      const startTagMatch = parseStartTag() //开始标签的匹配结果
-      if (startTagMatch) {
-        start(startTagMatch.tagName, startTagMatch.attrs)
-        continue
-      }
-
-      const endTagMatch = html.match(endTag)  //处理结束标签 </xxx>
-      if (endTagMatch) {
-        advance(endTagMatch[0].length)
-        end(endTagMatch[1])
-        continue
-      }
-
-    }
-    if (textEnd > 0) { //去除<之后说明有文本了
-      let text = html.substring(0, textEnd)
-      if (text) {
-        chars(text)
-        advance(text.length)
-      }
-
-    }
-
-  }
   return root
 }

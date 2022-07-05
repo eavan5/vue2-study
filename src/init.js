@@ -1,4 +1,4 @@
-import { callHook, initLifecycle, mountComponent } from './lifecycle'
+import { callHook, mountComponent } from './lifecycle'
 import { compileToTFunction } from './compiler'
 import { initState } from './state'
 import { mergeOptions } from './utils'
@@ -16,7 +16,6 @@ export function initMixin (Vue) {  // 给vue真假init方法
     initState(vm)
     callHook(vm, 'created')
 
-    initLifecycle(Vue)
 
     if (options.el) {
       vm.$mount(options.el) //实现数据的挂载

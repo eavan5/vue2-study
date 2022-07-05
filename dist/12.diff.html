@@ -7,33 +7,33 @@
 		<title>Document</title>
 	</head>
 	<body>
-		<div id="app">{{hobby}}</div>
+		<!-- <div id="app">
+			<div>{{arr}}</div>
+			<div>{{c}}</div>
+		</div> -->
 		<script src="./vue.js"></script>
 
+		<div id="app">
+			<div>
+				<li v-for="item in arr" key="item">{{item}} <input type="checkbox" /></li>
+			</div>
+			<button @click="append">追加</button>
+		</div>
 		<script>
 			const vm = new Vue({
-				el: '#app',
 				//代理数据
 				data() {
 					return {
-						name: 'wumao',
-						age: 16,
-						info: {
-							sex: 'man',
-							hobby: 'none',
-						},
-						hobby: [1, 2, 3, { age: 1 }],
+						arr: [1, 2, 3, 4],
 					}
 				},
+				methods: {
+					append() {
+						this.arr.unshift(3)
+					},
+				},
+				el: '#app',
 			})
-			console.log(vm)
-			vm.name = {
-				a: 1,
-			}
-			setTimeout(() => {
-				vm.hobby.push(333, 99)
-			}, 1000)
-			// console.log(vm)
 		</script>
 	</body>
 </html>

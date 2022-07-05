@@ -1,48 +1,7 @@
 import Watcher from "./observe/watcher"
 import { createElementVNode, createTextVNode } from "../vdom"
+import { patch } from "../vdom/patch"
 
-function createElm (vnode) {
-  let { tag, data, children, text } = vnode
-  if (typeof tag === 'string') {
-    vnode.el = document.createElement(tag) // 这里将真实节点与虚拟节点对应起来,后续如果修改属性,可以通过虚拟节点修改真实节点
-
-    patchProps(vnode.el, data)
-
-    children.forEach(child => {
-      vnode.el.appendChild(createElm(child))
-    })
-  } else {
-    vnode.el = document.createTextNode(text)
-  }
-  return vnode.el
-}
-
-function patchProps (el, props) {
-  for (const key in props) {
-    if (key === 'style') {
-      for (const styleName in props.style) {
-        el.style[styleName] = props.style[styleName]
-      }
-    } else {
-      el.setAttribute(key, props[key])
-    }
-  }
-}
-
-function patch (oldVNode, vnode) {
-  //写的出渲染流程
-  const isRealElement = oldVNode.nodeType
-  if (isRealElement) {
-    const elm = oldVNode // 获取真实元素
-    const parentElm = elm.parentNode // 拿到父元素
-    const newElm = createElm(vnode)
-    parentElm.insertBefore(newElm, elm.nextSibling)
-    parentElm.removeChild(elm)
-    return newElm
-  } else {
-    //diff算法
-  }
-}
 
 export function initLifecycle (Vue) {
   Vue.prototype._render = function () {
@@ -81,12 +40,12 @@ export function mountComponent (vm, el) {  // 这里的el是通过querySelector�
   //1.调用render函数产生虚拟dom
   // vm._render() // vm.$options.render 生成虚拟节点
   //2.根据虚拟dom生成真实dom
-  // console.log(vm._render());
+  console.log('虚拟dom:', vm._render());
   const updateComponent = () => {
     vm._update(vm._render())
   }
   const watchers = new Watcher(vm, updateComponent, true) // true用于标识是渲染watcher
-  console.log(watchers);
+  // console.log(watchers);
   //3.插入到真实dom
 }
 
